@@ -203,7 +203,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                                     .addComponent(jButton3))))
                         .addGap(0, 0, Short.MAX_VALUE))))
         );
-        jPanel2Layout.setVerticalGroup(
+       jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
@@ -407,6 +407,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         modificarTiempo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 modificarTiempoActionPerformed(evt);
+                modificarTiempo.addActionListener(new java.awt.event.ActionListener() {
+                    public void actionPerformed(java.awt.event.ActionEvent evt) {
+                        modificarTiempoActionPerformed(evt);
             }
         });
         Editar.add(modificarTiempo);
@@ -745,4 +748,5 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JPanel panelGrafoLienzo;
     private javax.swing.JTextField tiempoIn;
     // End of variables declaration//GEN-END:variables
+    
 }
