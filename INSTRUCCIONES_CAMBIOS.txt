@@ -1,0 +1,47 @@
+URBANROUTE - ACTUALIZACION DE EDICION Y ARCHIVOS
+NetBeans 20 | Java 17 | Java with Ant
+
+CAMBIOS
+- Se organizaron los metodos auxiliares de VentanaPrincipal por tema:
+  agregar estacion, modificar tiempo, eliminar estacion, rutas y archivos.
+- Se agregaron comentarios Javadoc a la clase, a los metodos de edicion
+  y a los eventos principales. No se modifico initComponents ni el .form.
+- Al seleccionar Archivo > Cargar CSV, si existen estaciones en memoria,
+  aparece un mensaje con Si, No y Cancelar.
+  Si: abre el selector para guardar; solo despues carga el nuevo CSV.
+  No: carga el nuevo CSV sin guardar los cambios actuales.
+  Cancelar: conserva la red actual.
+- Si se cancela o falla el guardado, no se carga el nuevo archivo.
+- Si falla la lectura del CSV nuevo, la red actual no se sustituye.
+- La red nueva se carga en un objeto Grafo independiente.
+- Guardar CSV ahora conserva los datos de las estaciones y sus conexiones
+  en un mismo archivo CSV que se puede volver a abrir desde el programa.
+- Se conserva la opcion de cargar archivos de solo estaciones o solo conexiones.
+
+FORMATO DEL CSV GUARDADO
+ID_Estacion,Nombre,Linea,Zona,Capacidad_Pasajeros_Hora
+...
+
+Estacion_Origen,Estacion_Destino,Tiempo_Minutos
+...
+
+NOTAS
+- Para guardar una red cargada desde un CSV original, el selector propone
+  ese mismo archivo. Si ya existe, se pedira confirmacion para sobrescribirlo.
+- Al cargar otro archivo no se permite guardar encima de ese archivo nuevo:
+  elige otro nombre para el respaldo.
+- Los campos CSV se separan mediante comas. La interfaz ya valida que los
+  campos de estaciones no contengan comas ni saltos de linea.
+- Si se carga un CSV de solo conexiones, se mantienen los nombres y otros
+  atributos genericos para las estaciones que no estan definidas en ese CSV.
+- La carpeta nbproject y el formulario .form se conservan como estaban.
+
+COMPROBACION
+- Codigo compilado con javac --release 17 usando los JAR aportados.
+- Para la clase AbsoluteLayout se empleo una sustitucion local de compilacion
+  (no se incluye en el proyecto), ya que la biblioteca forma parte de NetBeans.
+- Prueba de ida y vuelta: CSVprueba.csv -> guardar -> volver a cargar.
+  41 estaciones y 82 conexiones internas originales; al agregar una estacion
+  aislada se conservaron 42 estaciones y 82 conexiones internas.
+- CSV con numero invalido: carga rechazada con mensaje de linea.
+- La interfaz Swing debe probarse en NetBeans con sus bibliotecas instaladas.

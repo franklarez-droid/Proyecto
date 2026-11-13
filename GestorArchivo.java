@@ -1,140 +1,212 @@
 package controlador;
 
 import estructura.Grafo;
-import modelo.Estacion;
 import estructura.ListaEnlazada;
 import modelo.Conexion;
-import java.io.BufferedWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import modelo.Estacion;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
+/**
+ * Lee y guarda los datos de la red de transporte en archivos CSV.
+ * Acepta archivos de estaciones, archivos de conexiones y archivos
+ * que contienen ambas secciones.
+ */
 public class GestorArchivo {
 
+    /**
+     * Carga un CSV en el grafo recibido.
+     *
+     * @param archivo archivo que se desea leer
+     * @param grafo grafo donde se registraran los datos
+     * @return true si el archivo se leyo correctamente
+     */
     public static boolean cargarDesdeCSV(File archivo, Grafo grafo) {
-        if (archivo == null || !archivo.exists()) {
-            System.err.println("El archivo no existe o la ruta es inválida.");
+        try {
+            cargarDesdeCSVConErrores(archivo, grafo);
+            return true;
+        } catch (IOException | IllegalArgumentException ex) {
             return false;
         }
+    }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
+    /**
+     * Lee estaciones y conexiones. Si hay una fila incorrecta,
+     * informa el numero de linea para que la interfaz muestre el error.
+     * Se debe llamar con un grafo nuevo para evitar cargas parciales.
+     *
+     * @param archivo archivo CSV que se va a leer
+     * @param grafo grafo donde se agregaran estaciones y conexiones
+     * @throws IOException si ocurre un problema al leer el archivo
+     * @throws IllegalArgumentException si alguna fila es incorrecta
+     */
+    public static void cargarDesdeCSVConErrores(File archivo, Grafo grafo)
+            throws IOException {
+        if (archivo == null || grafo == null || !archivo.isFile()) {
+            throw new IOException("No se pudo abrir el archivo seleccionado.");
+        }
+
+        try (BufferedReader lector = Files.newBufferedReader(
+                archivo.toPath(), StandardCharsets.UTF_8)) {
             String linea;
-            int numeroLinea = 0;
+            int numero = 0;
+            while ((linea = lector.readLine()) != null) {
+                numero++;
+                linea = linea.replace("\uFEFF", "").trim();
+                if (linea.isEmpty()) {
+                    continue;
+                }
 
-            while ((linea = br.readLine()) != null) {
-                numeroLinea++;
-                linea = linea.trim();
-
-                // Ignora líneas vacías
-                if (linea.isEmpty()) continue;
-
-                // Detecta automáticamente si el separador es coma (,) o punto y coma (;)
                 String separador = linea.contains(";") ? ";" : ",";
-                String[] datos = linea.split(separador);
+                String[] campos = linea.split(separador, -1);
+                String primero = campos[0].trim();
 
-                // Omitir encabezados conocidos
-                String primeraColumna = datos[0].trim().toUpperCase();
-                if (primeraColumna.startsWith("ID") || primeraColumna.startsWith("ESTACION")) {
-                    continue; // Pasa a la siguiente línea (es la cabecera)
+                if (primero.equalsIgnoreCase("ID_Estacion")
+                        || primero.equalsIgnoreCase("Estacion_Origen")) {
+                    continue;
                 }
 
                 try {
-                    // Caso 1: Archivo de Estaciones (ID, Nombre, Linea, Zona, Capacidad)
-                    if (datos.length >= 5) {
-                        String id = datos[0].trim();
-                        String nombre = datos[1].trim();
-                        String lineaMetro = datos[2].trim();
-                        String zona = datos[3].trim();
-                        int capacidad = Integer.parseInt(datos[4].trim());
+                    if (campos.length == 5) {
+                        String id = campos[0].trim();
+                        String nombre = campos[1].trim();
+                        String nombreLinea = campos[2].trim();
+                        String zona = campos[3].trim();
+                        int capacidad = Integer.parseInt(campos[4].trim());
 
-                        Estacion estacion = new Estacion(id, nombre, lineaMetro, zona, capacidad);
-                        grafo.agregarEstacion(estacion);
-                    } 
-                    // Caso 2: Archivo de Conexiones (Origen, Destino, Tiempo)
-                    else if (datos.length >= 3) {
-                        String origen = datos[0].trim();
-                        String destino = datos[1].trim();
-                        int tiempo = Integer.parseInt(datos[2].trim());
+                        if (id.isEmpty() || nombre.isEmpty() || nombreLinea.isEmpty()
+                                || zona.isEmpty() || capacidad <= 0) {
+                            throw new IllegalArgumentException("Datos de estacion incompletos.");
+                        }
+                        if (grafo.getIndexEstaciones().buscar(id) != null) {
+                            throw new IllegalArgumentException("ID de estacion repetido: " + id);
+                        }
+                        grafo.agregarEstacion(new Estacion(
+                                id, nombre, nombreLinea, zona, capacidad));
+                    } else if (campos.length == 3) {
+                        String origen = campos[0].trim();
+                        String destino = campos[1].trim();
+                        int tiempo = Integer.parseInt(campos[2].trim());
+                        if (origen.isEmpty() || destino.isEmpty() || tiempo <= 0
+                                || origen.equalsIgnoreCase(destino)) {
+                            throw new IllegalArgumentException("Conexion invalida.");
+                        }
 
-                        // Registrar estaciones implícitas si aún no existen
+                        // Se conservan los valores predeterminados usados
+                        // en el proyecto para un CSV solo de conexiones.
                         if (grafo.getIndexEstaciones().buscar(origen) == null) {
-                            grafo.agregarEstacion(new Estacion(origen, origen, "Línea Generica", "General", 10000));
+                            grafo.agregarEstacion(new Estacion(
+                                    origen, origen, "Línea Generica", "General", 10000));
                         }
                         if (grafo.getIndexEstaciones().buscar(destino) == null) {
-                            grafo.agregarEstacion(new Estacion(destino, destino, "Línea Generica", "General", 10000));
+                            grafo.agregarEstacion(new Estacion(
+                                    destino, destino, "Línea Generica", "General", 10000));
                         }
-
                         grafo.agregarConexion(origen, destino, tiempo);
+                    } else {
+                        throw new IllegalArgumentException("Cantidad incorrecta de columnas.");
                     }
-                } catch (NumberFormatException nfe) {
-                    System.err.println("Error de formato numérico en la línea " + numeroLinea + ": " + linea);
+                } catch (NumberFormatException ex) {
+                    throw new IOException("Numero invalido en la linea " + numero + ".", ex);
+                } catch (IllegalArgumentException ex) {
+                    throw new IOException("Error en la linea " + numero + ": "
+                            + ex.getMessage(), ex);
                 }
             }
-            return true;
+        }
+    }
 
-        } catch (IOException e) {
-            e.printStackTrace();
+    /**
+     * Guarda las estaciones activas y sus conexiones en un unico CSV.
+     *
+     * @param archivo destino del CSV
+     * @param grafo red que se desea guardar
+     * @return true si se guardo correctamente
+     */
+    public static boolean guardarEnCSV(File archivo, Grafo grafo) {
+        try {
+            guardarEnCSVConErrores(archivo, grafo);
+            return true;
+        } catch (IOException | IllegalArgumentException ex) {
             return false;
         }
     }
-    
+
     /**
- * Guarda las conexiones activas del grafo en un archivo CSV.
- *
- * @param archivo Archivo donde se guardarán los datos.
- * @param grafo Grafo que contiene la red de transporte.
- * @return true si se guardó correctamente, false en caso contrario.
- */
-public static boolean guardarEnCSV(File archivo, Grafo grafo) {
-
-    if (archivo == null || grafo == null) {
-        return false;
-    }
-
-    try (BufferedWriter bw = Files.newBufferedWriter(
-            archivo.toPath(), StandardCharsets.UTF_8)) {
-
-        // Escribir encabezado
-        bw.write("Estacion_Origen,Estacion_Destino,Tiempo_Minutos");
-        bw.newLine();
-
-        // Recorrer las conexiones del grafo
-        ListaEnlazada.NodoLista<Conexion> actual =
-                grafo.getConexiones().getCabeza();
-
-        while (actual != null) {
-
-            Conexion conexion = actual.dato;
-
-            String origen = conexion.getOrigen().getId();
-            String destino = conexion.getDestino().getId();
-
-            // Guardar solo conexiones activas
-            if (conexion.isActiva()
-                    && conexion.getOrigen().isActiva()
-                    && conexion.getDestino().isActiva()) {
-
-                // Evitar duplicar conexiones del grafo no dirigido
-                if (origen.compareTo(destino) <= 0) {
-
-                    bw.write(origen + ","
-                            + destino + ","
-                            + conexion.getTiempoMinutos());
-
-                    bw.newLine();
-                }
-            }
-
-            actual = actual.siguiente;
+     * Guarda la red en un archivo temporal y lo reemplaza al terminar.
+     * Asi se evita dejar el archivo original a medio escribir si falla.
+     *
+     * @param archivo archivo de destino
+     * @param grafo red que se desea guardar
+     * @throws IOException si no puede escribirse el archivo
+     */
+    public static void guardarEnCSVConErrores(File archivo, Grafo grafo)
+            throws IOException {
+        if (archivo == null || grafo == null) {
+            throw new IllegalArgumentException("Archivo o grafo no valido.");
         }
 
-        return true;
+        Path destino = archivo.toPath().toAbsolutePath();
+        Path carpeta = destino.getParent();
+        Path temporal = Files.createTempFile(carpeta, "urbanroute-", ".tmp");
+        try {
+            try (BufferedWriter escritor = Files.newBufferedWriter(
+                    temporal, StandardCharsets.UTF_8)) {
+                escritor.write("ID_Estacion,Nombre,Linea,Zona,Capacidad_Pasajeros_Hora");
+                escritor.newLine();
 
-    } catch (IOException e) {
-        return false;
+                ListaEnlazada.NodoLista<Estacion> estacionActual =
+                        grafo.getEstaciones().getCabeza();
+                while (estacionActual != null) {
+                    Estacion estacion = estacionActual.dato;
+                    if (estacion.isActiva()) {
+                        // Los campos del formulario no pueden tener comas ni saltos de linea.
+                        escritor.write(estacion.getId() + "," + estacion.getNombre()
+                                + "," + estacion.getLinea() + "," + estacion.getZona()
+                                + "," + estacion.getCapacidadPasajeros());
+                        escritor.newLine();
+                    }
+                    estacionActual = estacionActual.siguiente;
+                }
+
+                escritor.newLine();
+                escritor.write("Estacion_Origen,Estacion_Destino,Tiempo_Minutos");
+                escritor.newLine();
+
+                ListaEnlazada.NodoLista<Conexion> conexionActual =
+                        grafo.getConexiones().getCabeza();
+                while (conexionActual != null) {
+                    Conexion conexion = conexionActual.dato;
+                    if (conexion.isActiva()
+                            && conexion.getOrigen().isActiva()
+                            && conexion.getDestino().isActiva()) {
+                        String origen = conexion.getOrigen().getId();
+                        String destinoId = conexion.getDestino().getId();
+                        // En el grafo no dirigido, cada enlace se guarda una sola vez.
+                        if (origen.compareToIgnoreCase(destinoId) < 0) {
+                            escritor.write(origen + "," + destinoId + ","
+                                    + conexion.getTiempoMinutos());
+                            escritor.newLine();
+                        }
+                    }
+                    conexionActual = conexionActual.siguiente;
+                }
+            }
+            try {
+                Files.move(temporal, destino, StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(temporal, destino, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporal);
+        }
     }
-}
 }
