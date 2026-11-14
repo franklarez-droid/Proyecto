@@ -175,7 +175,15 @@ public class AnalizadorRed {
         return resultado == null ? null : resultado.getEstaciones();
     }
 
-    // 2. DETECCIÓN DE SUBREDES (BFS/DFS)[span_27](start_span)[span_27](end_span)[span_28](start_span)[span_28](end_span)
+    // DETECCION DE SUBREDES (DFS)
+
+    /**
+     * Cuenta las subredes independientes utilizando DFS.
+     * Cada estacion activa se cuenta dentro de una sola subred.
+     *
+     * @param grafo red de transporte
+     * @return cantidad de subredes encontradas
+     */
     public static int contarComponentesConexos(Grafo grafo) {
         ListaEnlazada<Estacion> estaciones = grafo.getEstaciones();
         int n = estaciones.getTamaño();
@@ -203,6 +211,15 @@ public class AnalizadorRed {
         return componentes;
     }
 
+    /**
+     * Recorre las estaciones conectadas a una estacion y marca las visitadas.
+     *
+     * @param grafo red de transporte
+     * @param actual estacion desde la que continua el recorrido
+     * @param nodos arreglo de estaciones
+     * @param visitados indica que estaciones ya se visitaron
+     * @param n cantidad de estaciones del arreglo
+     */
     private static void dfsRec(Grafo grafo, Estacion actual, Estacion[] nodos, boolean[] visitados, int n) {
         int idx = -1;
         for (int k = 0; k < n; k++) {
@@ -221,7 +238,107 @@ public class AnalizadorRed {
         }
     }
 
-    // 3. IDENTIFICACIÓN DE HUBS (CENTRALIDAD DE GRADO)[span_29](start_span)[span_29](end_span)[span_30](start_span)[span_30](end_span)
+    /**
+     * Obtiene un texto con las estaciones que pertenecen a cada subred.
+     * Utiliza DFS y no modifica las estaciones ni las conexiones del grafo.
+     *
+     * @param grafo red de transporte
+     * @return texto con las estaciones agrupadas por subred
+     */
+    public static String obtenerDetalleSubredes(Grafo grafo) {
+        if (grafo == null) {
+            return "No hay estaciones en la red.";
+        }
+
+        ListaEnlazada<Estacion> estaciones = grafo.getEstaciones();
+        int n = estaciones.getTamaño();
+        if (n == 0) {
+            return "No hay estaciones en la red.";
+        }
+
+        Estacion[] nodos = new Estacion[n];
+        boolean[] visitados = new boolean[n];
+
+        // Copiar las estaciones de la lista enlazada a un arreglo.
+        ListaEnlazada.NodoLista<Estacion> aux = estaciones.getCabeza();
+        int i = 0;
+        while (aux != null) {
+            nodos[i] = aux.dato;
+            i++;
+            aux = aux.siguiente;
+        }
+
+        StringBuilder resultado = new StringBuilder();
+        int componentes = 0;
+
+        // Iniciar un DFS por cada grupo de estaciones no visitado.
+        for (int j = 0; j < n; j++) {
+            if (!visitados[j] && nodos[j].isActiva()) {
+                componentes++;
+                resultado.append("Subred ").append(componentes).append(":\n");
+
+                dfsDetalle(grafo, nodos[j], nodos, visitados, n, resultado);
+                resultado.append("\n");
+            }
+        }
+
+        if (componentes == 0) {
+            return "No hay estaciones activas en la red.";
+        }
+        return resultado.toString();
+    }
+
+    /**
+     * Recorre las estaciones de una subred mediante DFS y agrega sus datos
+     * al texto de resultados.
+     *
+     * @param grafo red de transporte
+     * @param actual estacion que se esta recorriendo
+     * @param nodos arreglo de estaciones
+     * @param visitados indica que estaciones ya se visitaron
+     * @param n cantidad de estaciones del arreglo
+     * @param resultado texto que contiene las estaciones de la subred
+     */
+    private static void dfsDetalle(Grafo grafo, Estacion actual,
+            Estacion[] nodos, boolean[] visitados, int n,
+            StringBuilder resultado) {
+
+        int indice = -1;
+        for (int i = 0; i < n; i++) {
+            if (nodos[i].equals(actual)) {
+                indice = i;
+                break;
+            }
+        }
+
+        // Detener el recorrido si la estacion no existe o ya fue visitada.
+        if (indice == -1 || visitados[indice] || !actual.isActiva()) {
+            return;
+        }
+
+        visitados[indice] = true;
+        resultado.append(" - ").append(actual.getId())
+                .append(" - ").append(actual.getNombre()).append("\n");
+
+        ListaEnlazada<Conexion> adyacentes = grafo.obtenerAdyacentes(actual);
+        ListaEnlazada.NodoLista<Conexion> aux = adyacentes.getCabeza();
+
+        while (aux != null) {
+            Estacion destino = aux.dato.getDestino();
+            dfsDetalle(grafo, destino, nodos, visitados, n, resultado);
+            aux = aux.siguiente;
+        }
+    }
+
+    // IDENTIFICACION DE HUBS (CENTRALIDAD DE GRADO)
+
+    /**
+     * Obtiene la estacion activa con mayor cantidad de conexiones directas.
+     * Si hay empate, devuelve la primera encontrada.
+     *
+     * @param grafo red de transporte
+     * @return estacion con mayor grado, o null si no hay estaciones activas
+     */
     public static Estacion obtenerHubPrincipal(Grafo grafo) {
         ListaEnlazada<Estacion> estaciones = grafo.getEstaciones();
         ListaEnlazada.NodoLista<Estacion> aux = estaciones.getCabeza();

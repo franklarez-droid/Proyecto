@@ -10,7 +10,6 @@
 package vista;
 
 //---IMPORTS---//
-
 //De otros paquetes del proyecto:
 import controlador.AnalizadorRed;
 import controlador.GestorArchivo;
@@ -27,11 +26,11 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-
-/**---Ventana principal del sistema de transporte---
- * 
- * Permite cargar archivos CSV, modificar estaciones y conexiones 
- * y consultar los resultados de los algoritmos desde la interfaz.
+/**
+ * ---Ventana principal del sistema de transporte---
+ *
+ * Permite cargar archivos CSV, modificar estaciones y conexiones y consultar
+ * los resultados de los algoritmos desde la interfaz.
  */
 public class VentanaPrincipal extends javax.swing.JFrame {
 
@@ -42,12 +41,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private boolean actualizandoLineas = false;
 
     /**
-     * Almacena temporalmente los datos de una conexion antes de agregarla al 
+     * Almacena temporalmente los datos de una conexion antes de agregarla al
      * grafo.
      */
     private static class ConexionPendiente {
+
         String idDestino;
         int tiempo;
+
         /**
          * Constructor de la conexión pendiente.
          *
@@ -65,17 +66,56 @@ public class VentanaPrincipal extends javax.swing.JFrame {
      */
     private ListaEnlazada<ConexionPendiente> conexionesPendientes
             = new ListaEnlazada<>();
-    
+
+    /**
+     * Calcula la cantidad de subredes y muestra las estaciones que pertenecen a
+     * cada una en el formulario.
+     */
+    private void mostrarSubredes() {
+
+        // Comprobar que existan estaciones en el grafo
+        if (grafo.getEstaciones().estaVacia()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No hay estaciones cargadas en la red.",
+                    "Detección de subredes",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Obtener la cantidad de subredes
+        int cantidad = AnalizadorRed.contarComponentesConexos(grafo);
+
+        // Obtener las estaciones que pertenecen a cada subred
+        String detalle = AnalizadorRed.obtenerDetalleSubredes(grafo);
+
+        // Mostrar los resultados en el formulario
+        subredesNumero.setText(String.valueOf(cantidad));
+        subredesLista.setText(detalle);
+
+        // Mostrar el texto desde el principio
+        subredesLista.setCaretPosition(0);
+
+        // Abrir el JFrame de subredes
+        algoritmoSubredes.pack();
+        algoritmoSubredes.setLocationRelativeTo(this);
+        algoritmoSubredes.setVisible(true);
+    }
+
     /**
      * Inicializa los componentes de NetBeans y configura las ventanas
      * secundarias.
      */
     public VentanaPrincipal() {
         initComponents();
-        
+
+        algoritmoSubredes.setDefaultCloseOperation(
+                javax.swing.WindowConstants.HIDE_ON_CLOSE
+        );
+
         //Instrucciones de "HIDE ON CLOSE" a las ventanas secundarias.
         //Esta instrucción hace que solo se oculten al presionar la X.
-        
         editarEliminarEstacion.setDefaultCloseOperation(
                 javax.swing.WindowConstants.HIDE_ON_CLOSE);
 
@@ -85,16 +125,16 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         editarAgregarEstacion.setDefaultCloseOperation(
                 javax.swing.WindowConstants.HIDE_ON_CLOSE);
-        
+
         //Centra el lienzo del grafo.
         panelGrafoLienzo.setLayout(new java.awt.BorderLayout());
         setLocationRelativeTo(null);
 
     }
-    
+
     //-------MÉTODOS------//
-    
-    /**---EDITAR: AGREGAR ESTACION---
+    /**
+     * ---EDITAR: AGREGAR ESTACION---
      *
      * Prepara los campos para registrar una estacion y muestra las estaciones
      * disponibles.
@@ -113,7 +153,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         nuevaConexion.removeAllItems(); //Limpia el JComboBox.
         nuevaConexion.addItem("Seleccionar estación...");
-        
+
         // Recorre la lista de estaciones y agrega al JComboBox
         // las estaciones activas, en el formato de "ID - Nombre".    
         ListaEnlazada.NodoLista<Estacion> actual
@@ -135,7 +175,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         // Informar cuando se crea la primera estación
         if (grafo.getEstaciones().estaVacia()) {
-            
+
             //Si no hay estaciones en el grafo, deshabilita los paneles 
             //de conexión, ya que no habrian mas de dos estaciones 
             //para conectar.
@@ -147,7 +187,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             //la primera estación del grafo.
             JOptionPane.showMessageDialog(
                     editarAgregarEstacion,
-                      "No hay estaciones registradas.\n"
+                    "No hay estaciones registradas.\n"
                     + "Puedes crear la primera estación sin conexiones.\n"
                     + "Después podrás agregar otras estaciones y conectarlas.",
                     "Primera estación",
@@ -155,14 +195,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             );
 
         } else {
-            
+
             //Si existen una o mas estaciónes, se habilitan los controles
             //de conexión para la nueva estación
             nuevaConexion.setEnabled(true);
             nuevaTiempo.setEnabled(true);
             nuevaAgregar.setEnabled(true);
         }
-        
+
         //Se crea la lista de conexiones pendientes.
         conexionesPendientes = new ListaEnlazada<>();
         resumenConexiones.setText("");
@@ -258,7 +298,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         }
     }
 
-    // ===== METODOS DE EDICION - MODIFICAR Y ELIMINAR =====
+    //--MÉTODOS DE EDICIÓN - MODIFICAR Y ELIMINAR--//
     /**
      * Carga las estaciones activas en los selectores para modificar tiempos.
      */
@@ -324,7 +364,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         eliminarEstacionCombo.setSelectedIndex(0);
     }
 
-    // ===== METODOS DE ALGORITMOS - RUTA OPTIMA =====
+    //--MÉTODOS DE ALGORITMOS - RUTA ÓPTIMA--//
     /**
      * Carga las estaciones para calcular una ruta y limpia el resultado
      * anterior.
@@ -445,7 +485,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         algoritmoRuta.setVisible(false);
     }
 
-    // ===== METODOS DE ARCHIVOS Y VISUALIZACION =====
+    //--MÉTODOS DE ARCHIVOS Y VISUALIZACION--//
     /**
      * Muestra el selector de guardado y escribe la red completa. Si el usuario
      * cancela o se produce un error, devuelve false.
@@ -587,7 +627,23 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         rutaResultado = new javax.swing.JTextArea();
         rutaCalcular = new javax.swing.JButton();
         algoritmoSubredes = new javax.swing.JFrame();
-        algoritmosHubs = new javax.swing.JFrame();
+        subredesLabeltitulo = new javax.swing.JLabel();
+        subredesNumero = new javax.swing.JLabel();
+        subredesLabelEstaciones = new javax.swing.JLabel();
+        subredesScroll = new javax.swing.JScrollPane();
+        subredesLista = new javax.swing.JTextArea();
+        jSeparator6 = new javax.swing.JSeparator();
+        algoritmoHubs = new javax.swing.JFrame();
+        labelTitulo = new javax.swing.JLabel();
+        hublabelID = new javax.swing.JLabel();
+        jSeparator4 = new javax.swing.JSeparator();
+        hubLabelNombre = new javax.swing.JLabel();
+        hubLabelLinea = new javax.swing.JLabel();
+        hubLabelConexiones = new javax.swing.JLabel();
+        hubID = new javax.swing.JLabel();
+        hubNombre = new javax.swing.JLabel();
+        hubLinea = new javax.swing.JLabel();
+        hubConexiones = new javax.swing.JLabel();
         panelGrafoLienzo = new javax.swing.JPanel();
         Menu = new javax.swing.JMenuBar();
         Archivo = new javax.swing.JMenu();
@@ -604,6 +660,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         identificarHubs = new javax.swing.JMenuItem();
 
         editarAgregarEstacion.setTitle("Nueva estación");
+
+        jPanel2.setToolTipText("Agregar una nueva estación");
 
         labelDatos.setFont(new java.awt.Font("Segoe UI", 1, 12)); // NOI18N
         labelDatos.setText("Datos de la estación");
@@ -780,6 +838,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
 
+        editarEliminarEstacion.setTitle("Eliminar estación");
+
         eliminarEstacionCombo.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Seleccionar estación..." }));
         eliminarEstacionCombo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -823,6 +883,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         );
 
         editarModificarTiempoJFrame.setTitle("Modificar tiempo");
+
+        jPanel1.setToolTipText("Modificar tiempo");
 
         labelEA.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         labelEA.setText("Estación A:");
@@ -908,7 +970,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
             .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
-        algoritmoRuta.setTitle("Calcular Ruta");
+        algoritmoRuta.setTitle("Calcular Ruta (Dijkstra)");
 
         origenLabel.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         origenLabel.setText("Estación de origen:");
@@ -977,26 +1039,125 @@ public class VentanaPrincipal extends javax.swing.JFrame {
                 .addContainerGap())
         );
 
+        algoritmoSubredes.setTitle("Sub-redes");
+
+        subredesLabeltitulo.setText("Cantidad de sub-redes:");
+
+        subredesNumero.setText("n");
+
+        subredesLabelEstaciones.setText("Estaciones por sub-red:");
+
+        subredesLista.setEditable(false);
+        subredesLista.setColumns(20);
+        subredesLista.setLineWrap(true);
+        subredesLista.setRows(5);
+        subredesLista.setWrapStyleWord(true);
+        subredesScroll.setViewportView(subredesLista);
+
         javax.swing.GroupLayout algoritmoSubredesLayout = new javax.swing.GroupLayout(algoritmoSubredes.getContentPane());
         algoritmoSubredes.getContentPane().setLayout(algoritmoSubredesLayout);
         algoritmoSubredesLayout.setHorizontalGroup(
             algoritmoSubredesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+            .addGroup(algoritmoSubredesLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(algoritmoSubredesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jSeparator6)
+                    .addGroup(algoritmoSubredesLayout.createSequentialGroup()
+                        .addGroup(algoritmoSubredesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(subredesLabeltitulo, javax.swing.GroupLayout.PREFERRED_SIZE, 159, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(subredesNumero, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(subredesLabelEstaciones, javax.swing.GroupLayout.PREFERRED_SIZE, 181, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addComponent(subredesScroll, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 234, Short.MAX_VALUE))
+                .addContainerGap())
         );
         algoritmoSubredesLayout.setVerticalGroup(
             algoritmoSubredesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 300, Short.MAX_VALUE)
+            .addGroup(algoritmoSubredesLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(subredesLabeltitulo)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(subredesNumero)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jSeparator6, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(2, 2, 2)
+                .addComponent(subredesLabelEstaciones)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(subredesScroll, javax.swing.GroupLayout.PREFERRED_SIZE, 201, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        javax.swing.GroupLayout algoritmosHubsLayout = new javax.swing.GroupLayout(algoritmosHubs.getContentPane());
-        algoritmosHubs.getContentPane().setLayout(algoritmosHubsLayout);
-        algoritmosHubsLayout.setHorizontalGroup(
-            algoritmosHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+        algoritmoHubs.setTitle("Identificación de Hubs");
+
+        labelTitulo.setText("Hub principal de la red:");
+
+        hublabelID.setText("ID");
+
+        hubLabelNombre.setText("Nombre");
+
+        hubLabelLinea.setText("Línea");
+
+        hubLabelConexiones.setText("Conexiones directas");
+
+        hubID.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        hubID.setText("id");
+
+        hubNombre.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        hubNombre.setText("nombre");
+
+        hubLinea.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        hubLinea.setText("Línea");
+
+        hubConexiones.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        hubConexiones.setText("int");
+
+        javax.swing.GroupLayout algoritmoHubsLayout = new javax.swing.GroupLayout(algoritmoHubs.getContentPane());
+        algoritmoHubs.getContentPane().setLayout(algoritmoHubsLayout);
+        algoritmoHubsLayout.setHorizontalGroup(
+            algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(algoritmoHubsLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(labelTitulo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jSeparator4, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addGroup(algoritmoHubsLayout.createSequentialGroup()
+                        .addGroup(algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(hubLabelConexiones, javax.swing.GroupLayout.DEFAULT_SIZE, 117, Short.MAX_VALUE)
+                            .addComponent(hubLabelLinea, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(hublabelID, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(hubLabelNombre, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(hubID, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(hubNombre, javax.swing.GroupLayout.DEFAULT_SIZE, 127, Short.MAX_VALUE)
+                            .addComponent(hubLinea, javax.swing.GroupLayout.DEFAULT_SIZE, 127, Short.MAX_VALUE)
+                            .addComponent(hubConexiones, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                .addContainerGap())
         );
-        algoritmosHubsLayout.setVerticalGroup(
-            algoritmosHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 300, Short.MAX_VALUE)
+        algoritmoHubsLayout.setVerticalGroup(
+            algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(algoritmoHubsLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(labelTitulo)
+                .addGap(2, 2, 2)
+                .addComponent(jSeparator4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(hublabelID)
+                    .addComponent(hubID))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(hubLabelNombre)
+                    .addComponent(hubNombre))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(hubLabelLinea)
+                    .addComponent(hubLinea))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(algoritmoHubsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(hubLabelConexiones)
+                    .addComponent(hubConexiones))
+                .addContainerGap())
         );
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -1006,7 +1167,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         panelGrafoLienzo.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "Visualización de la red multimodal:", javax.swing.border.TitledBorder.CENTER, javax.swing.border.TitledBorder.DEFAULT_POSITION));
         panelGrafoLienzo.setToolTipText("Visualización de la red multimodal");
         panelGrafoLienzo.setLayout(new java.awt.BorderLayout());
-        getContentPane().add(panelGrafoLienzo, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 900, 480));
+        getContentPane().add(panelGrafoLienzo, new org.netbeans.lib.awtextra.AbsoluteConstraints(0, 0, 890, 580));
 
         Archivo.setText("Archivo");
 
@@ -1069,9 +1230,19 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         Algoritmos.add(calcularRuta);
 
         detectarSubredes.setText("Detectar Sub-redes");
+        detectarSubredes.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                detectarSubredesActionPerformed(evt);
+            }
+        });
         Algoritmos.add(detectarSubredes);
 
-        identificarHubs.setText("Identificar Hubs");
+        identificarHubs.setText("Identificar Hub");
+        identificarHubs.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                identificarHubsActionPerformed(evt);
+            }
+        });
         Algoritmos.add(identificarHubs);
 
         Menu.add(Algoritmos);
@@ -1190,7 +1361,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
 
         algoritmoRuta.pack();
         algoritmoRuta.setLocationRelativeTo(this);
-        algoritmoRuta.setVisible(true);        // TODO add your handling code here:
+        algoritmoRuta.setVisible(true);
     }//GEN-LAST:event_calcularRutaActionPerformed
 
     private void nuevaTiempoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_nuevaTiempoActionPerformed
@@ -1265,6 +1436,42 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         actualizarResumenConexiones();
         nuevaTiempo.setText("");
     }//GEN-LAST:event_nuevaAgregarActionPerformed
+
+    //--ALGORITMOS - DETECTAR HUBS--//
+    /**
+     * Identifica la estacion con mayor cantidad de conexiones directas y
+     * muestra sus datos en el formulario de hubs.
+     */
+    private void mostrarHubPrincipal() {
+
+        // Obtener el hub principal de la red
+        Estacion hub = AnalizadorRed.obtenerHubPrincipal(grafo);
+
+        // Comprobar si existen estaciones activas
+        if (hub == null) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No hay estaciones activas en la red.",
+                    "Identificar hubs",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        // Obtener la cantidad de conexiones del hub
+        int conexiones = grafo.obtenerAdyacentes(hub).getTamaño();
+
+        // Mostrar los datos de la estacion
+        hubID.setText(hub.getId());
+        hubNombre.setText(hub.getNombre());
+        hubLinea.setText(hub.getLinea());
+        hubConexiones.setText(String.valueOf(conexiones));
+
+        // Abrir el formulario con los resultados
+        algoritmoHubs.pack();
+        algoritmoHubs.setLocationRelativeTo(this);
+        algoritmoHubs.setVisible(true);
+    }
 
     private void modificarTiempoEAActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_modificarTiempoEAActionPerformed
         // TODO add your handling code here:
@@ -1982,6 +2189,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
         editarEliminarEstacion.setVisible(false);
     }//GEN-LAST:event_eliminarActionPerformed
 
+    private void identificarHubsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_identificarHubsActionPerformed
+        mostrarHubPrincipal();
+    }//GEN-LAST:event_identificarHubsActionPerformed
+
+    private void detectarSubredesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_detectarSubredesActionPerformed
+        mostrarSubredes();
+    }//GEN-LAST:event_detectarSubredesActionPerformed
+
     /**
      * @param args the command line arguments
      */
@@ -2023,9 +2238,9 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenu Archivo;
     private javax.swing.JMenu Editar;
     private javax.swing.JMenuBar Menu;
+    private javax.swing.JFrame algoritmoHubs;
     private javax.swing.JFrame algoritmoRuta;
     private javax.swing.JFrame algoritmoSubredes;
-    private javax.swing.JFrame algoritmosHubs;
     private javax.swing.JMenuItem botonAgregarEstacion;
     private javax.swing.JMenuItem botonEliminarEstacion;
     private javax.swing.JMenuItem calcularRuta;
@@ -2038,6 +2253,14 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JButton eliminar;
     private javax.swing.JComboBox<String> eliminarEstacionCombo;
     private javax.swing.JMenuItem guardarCSV;
+    private javax.swing.JLabel hubConexiones;
+    private javax.swing.JLabel hubID;
+    private javax.swing.JLabel hubLabelConexiones;
+    private javax.swing.JLabel hubLabelLinea;
+    private javax.swing.JLabel hubLabelNombre;
+    private javax.swing.JLabel hubLinea;
+    private javax.swing.JLabel hubNombre;
+    private javax.swing.JLabel hublabelID;
     private javax.swing.JMenuItem identificarHubs;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JPanel jPanel1;
@@ -2046,6 +2269,8 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JSeparator jSeparator1;
     private javax.swing.JPopupMenu.Separator jSeparator2;
     private javax.swing.JSeparator jSeparator3;
+    private javax.swing.JSeparator jSeparator4;
+    private javax.swing.JSeparator jSeparator6;
     private javax.swing.JLabel labelCapacidad;
     private javax.swing.JLabel labelConexiones;
     private javax.swing.JLabel labelDatos;
@@ -2056,6 +2281,7 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JLabel labelNombre;
     private javax.swing.JLabel labelT;
     private javax.swing.JLabel labelTiempo;
+    private javax.swing.JLabel labelTitulo;
     private javax.swing.JLabel labelZona;
     private javax.swing.JLabel laberLinea;
     private javax.swing.JMenuItem modificarTiempo;
@@ -2080,6 +2306,11 @@ public class VentanaPrincipal extends javax.swing.JFrame {
     private javax.swing.JComboBox<String> rutaOrigen;
     private javax.swing.JTextArea rutaResultado;
     private javax.swing.JScrollPane rutaScroll;
+    private javax.swing.JLabel subredesLabelEstaciones;
+    private javax.swing.JLabel subredesLabeltitulo;
+    private javax.swing.JTextArea subredesLista;
+    private javax.swing.JLabel subredesNumero;
+    private javax.swing.JScrollPane subredesScroll;
     private javax.swing.JTextField tiempoIn;
     // End of variables declaration//GEN-END:variables
 }

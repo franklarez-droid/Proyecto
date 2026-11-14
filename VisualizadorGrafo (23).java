@@ -15,17 +15,18 @@ import org.graphstream.ui.view.View;
 import org.graphstream.ui.view.Viewer;
 
 /**
- * Muestra las estaciones y conexiones del metro usando GraphStream.
- * Permite distinguir visualmente el recorrido calculado por Dijkstra.
+ * Muestra las estaciones y conexiones del metro usando GraphStream. Permite
+ * distinguir visualmente el recorrido calculado por Dijkstra. El tamaño de cada
+ * nodo depende de sus conexiones directas.
  */
-public class VisualizadorGrafo{
+public class VisualizadorGrafo {
 
     private final Graph graphGS;
     private SwingViewer viewer;
     private final String estiloCSS;
 
     /**
-     * Crea el grafo visual y define los colores y tamaÃ±os de sus elementos.
+     * Crea el grafo visual y define los colores y tamaños de sus elementos.
      */
     public VisualizadorGrafo() {
         graphGS = new SingleGraph("RedMultimodal");
@@ -78,7 +79,7 @@ public class VisualizadorGrafo{
      * @return panel de Swing con el grafo dibujado
      */
     public JPanel renderizarGrafo(Grafo grafoPropio,
-                                  ListaEnlazada<Estacion> ruta) {
+            ListaEnlazada<Estacion> ruta) {
 
         // Cerrar la vista anterior antes de dibujar nuevamente.
         if (viewer != null) {
@@ -89,8 +90,8 @@ public class VisualizadorGrafo{
         graphGS.setAttribute("ui.stylesheet", estiloCSS);
 
         // Agregar solamente las estaciones activas.
-        ListaEnlazada.NodoLista<Estacion> estacionActual =
-                grafoPropio.getEstaciones().getCabeza();
+        ListaEnlazada.NodoLista<Estacion> estacionActual
+                = grafoPropio.getEstaciones().getCabeza();
 
         while (estacionActual != null) {
             Estacion estacion = estacionActual.dato;
@@ -98,14 +99,26 @@ public class VisualizadorGrafo{
             if (estacion.isActiva()) {
                 Node nodo = graphGS.addNode(estacion.getId());
                 nodo.setAttribute("ui.label", estacion.getId());
+
+                // Ajustar el tamaño del nodo según sus conexiones directas.
+                int conexiones
+                        = grafoPropio.obtenerAdyacentes(estacion).getTamaño();
+
+                int tamaño = 10 + conexiones * 4;
+
+                if (tamaño > 40) {
+                    tamaño = 40;
+                }
+
+                nodo.setAttribute("ui.style", "size: " + tamaño + "px;");
             }
 
             estacionActual = estacionActual.siguiente;
         }
 
         // Dibujar cada conexion no dirigida una sola vez.
-        ListaEnlazada.NodoLista<Conexion> conexionActual =
-                grafoPropio.getConexiones().getCabeza();
+        ListaEnlazada.NodoLista<Conexion> conexionActual
+                = grafoPropio.getConexiones().getCabeza();
 
         while (conexionActual != null) {
             Conexion conexion = conexionActual.dato;
@@ -167,8 +180,8 @@ public class VisualizadorGrafo{
     }
 
     /**
-     * Obtiene el mismo identificador para una conexion en ambos sentidos.
-     * Esto evita dibujar dos veces una arista de un grafo no dirigido.
+     * Obtiene el mismo identificador para una conexion en ambos sentidos. Esto
+     * evita dibujar dos veces una arista de un grafo no dirigido.
      *
      * @param origen identificador de la primera estacion
      * @param destino identificador de la segunda estacion
